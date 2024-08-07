@@ -26,15 +26,14 @@ class Conexion:
         return pwd
 
     def crearUsuario(self):
-        print('Para empezar crearemos un usuario')
+        print('Creación del usuario')
         usuario = input('Ingrese un nombre de usuario: ')
         clave = getpass.getpass('Ingrese una contraseña: ')
         clave = self.encriptarPwd(clave)
-        estado = 'desconectado'
 
         try:
             cursor = self.conexion.cursor()
-            cursor.execute("INSERT INTO usuario (usuario, clave, estado) VALUES (%s, %s, %s)", (usuario, clave, estado))
+            cursor.execute("INSERT INTO usuario (usuario, clave) VALUES (%s, %s)", (usuario, clave))
             self.conexion.commit()
             print('Usuario creado exitosamente')
         except Error as ex:

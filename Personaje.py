@@ -1,117 +1,126 @@
-import psycopg2
+from conexion import Conexion
+import time
+from os import system
+import getpass
+import os
 
+conexion = Conexion()
+cursor = conexion.conexion.cursor()
+cursor1 = conexion.conexion.cursor()
 class Personaje:
-    def __init__(self):
-        self.conn = psycopg2.connect("dbname=juegorol user=root password=password")
-        self.cursor = self.conn.cursor()
+    
+    def fetch_options(table_name):
+        cursor.execute(f"SELECT id, nombre FROM {table_name}")
+        uso = cursor.fetchall()
+        return uso 
 
-    def fetch_options(self, table_name):
-        self.cursor.execute(f"SELECT nombre FROM {table_name}")
-        return [row[0] for row in self.cursor.fetchall()]
+    def fetch_habilidades(raza):
+        
+        cursor.execute("SELECT h.id, h.nombre FROM habilidades h JOIN raza r ON h.raza_id = r.id WHERE r.id = %s", (raza,))
+        habilidades = cursor.fetchall() 
+        return habilidades
 
-    def fetch_habilidades(self, raza):
-        self.cursor.execute("SELECT h.nombre FROM habilidades h JOIN raza r ON h.raza_id = r.id WHERE r.nombre = %s", (raza,))
-        return [row[0] for row in self.cursor.fetchall()]
-
-    def fetch_poderes(self, raza):
-        self.cursor.execute("SELECT p.nombre FROM poderes p JOIN raza r ON p.raza_id = r.id WHERE r.nombre = %s", (raza,))
-        return [row[0] for row in self.cursor.fetchall()]
-
-    def elegir_opcion(self, mensaje, opciones):
+    def fetch_poderes(raza):
+        
+        cursor.execute("SELECT p.id, p.nombre FROM poderes p JOIN raza r ON p.raza_id = r.id WHERE r.id = %s", (raza,))
+        poderes = cursor.fetchall()
+        return poderes 
+        
+    def elegir_opcion(mensaje, opciones):
+        
         print(mensaje)
         for i, opcion in enumerate(opciones, 1):
-            print(f"{i}. {opcion}")
+            print(f"{i}. {opcion[1]}")
         eleccion = int(input("Elige una opción: ")) - 1
         while eleccion < 0 or eleccion >= len(opciones):
             eleccion = int(input("Opción no válida. Elige una opción: ")) - 1
         return opciones[eleccion]
 
-    def elegir_habilidades(self, raza):
+    def elegir_habilidades(raza):
         print("Elige dos habilidades básicas:")
-        habilidades = self.fetch_habilidades(raza)
-        habilidad1 = self.elegir_opcion("Elige la primera habilidad básica:", habilidades)
-        habilidad2 = self.elegir_opcion("Elige la segunda habilidad básica:", habilidades)
+        habilidades = Personaje.fetch_habilidades(raza)
+        habilidad1 = Personaje.elegir_opcion("Elige la primera habilidad básica:", habilidades)
+        habilidad2 = Personaje.elegir_opcion("Elige la segunda habilidad básica:", habilidades)
         while habilidad1 == habilidad2:
             print("No puedes elegir la misma habilidad dos veces.")
-            habilidad2 = self.elegir_opcion("Elige la segunda habilidad básica:", habilidades)
-        return [habilidad1, habilidad2]
+            habilidad2 = Personaje.elegir_opcion("Elige la segunda habilidad básica:", habilidades)
+        
+        return  [habilidad1[1], habilidad2[1]]
 
-    def elegir_equipamiento(self):
-        equipamientos = self.fetch_options("equipamientos")
-        return self.elegir_opcion("Elige un equipamiento:", equipamientos)
+    def elegir_equipamiento():
+        equipamientos = Personaje.fetch_options("equipamientos")
+        return Personaje.elegir_opcion("Elige un equipamiento:", equipamientos)
 
-    def elegir_poder(self, raza):
-        poderes = self.fetch_poderes(raza)
-        return self.elegir_opcion("Elige un poder especial:", poderes)
+    def elegir_poder(raza):
+        poderes = Personaje.fetch_poderes(raza)
+        return Personaje.elegir_opcion("Elige un poder especial:", poderes)
 
-    def crear_personaje(self):
+    def crear_personaje():
         """Crear personaje"""
         nombre = input("Nombre del personaje: ")
 
-        razas = self.fetch_options("raza")
-        raza = self.elegir_opcion("Elige una raza:", razas)
-
+        razas = Personaje.fetch_options("raza")
+        raza = Personaje.elegir_opcion("Elige una raza:", razas)
+        system('cls')
+        
         """Elegir habilidades, equipamiento y poder"""
-        habilidades = self.elegir_habilidades(raza)
-        equipamiento = self.elegir_equipamiento()
-        poder = self.elegir_poder(raza)
-
+        habilidades = Personaje.elegir_habilidades(raza[0])
+        equipamiento = Personaje.elegir_equipamiento()
+        poder = Personaje.elegir_poder(raza[0])
+        system('cls')
+        
         """Estado del jugador"""
-        estado = "Vivo"
+        estado = "vivo"
 
         """Resumen personaje"""
         personaje = {
             "nombre": nombre,
-            "raza": raza,
+            "raza": raza[1],
             "habilidades": habilidades,
-            "equipamiento": equipamiento,
-            "poder": poder,
+            "equipamiento": equipamiento[1],
+            "poder": poder[1],
             "estado": estado
         }
         
-        self.guardar_personaje_db(personaje)
-        
+        Personaje.guardar_personaje_db(personaje)
+        system('cls')
         return personaje
 
-    def guardar_personaje_db(self, personaje):
+    def guardar_personaje_db(personaje):
         raza_id_query = "SELECT id FROM raza WHERE nombre = %s"
-        self.cursor.execute(raza_id_query, (personaje['raza'],))
-        raza_id = self.cursor.fetchone()[0]
+        cursor.execute(raza_id_query, (personaje['raza'],))
+        raza_id = cursor.fetchall()
 
         habilidades_id_query = "SELECT id FROM habilidades WHERE nombre = %s"
-        self.cursor.execute(habilidades_id_query, (personaje['habilidades'][0],))
-        habilidad1_id = self.cursor.fetchone()[0]
-        self.cursor.execute(habilidades_id_query, (personaje['habilidades'][1],))
-        habilidad2_id = self.cursor.fetchone()[0]
+        cursor.execute(habilidades_id_query, (personaje['habilidades'][0],))
+        habilidad1_id = cursor.fetchall()
+        
+        cursor.execute(habilidades_id_query, (personaje['habilidades'][1],))
+        habilidad2_id = cursor.fetchall()
+        
+        habilidad_id = [habilidad1_id, habilidad2_id]
 
         equipamiento_id_query = "SELECT id FROM equipamientos WHERE nombre = %s"
-        self.cursor.execute(equipamiento_id_query, (personaje['equipamiento'],))
-        equipamiento_id = self.cursor.fetchone()[0]
+        cursor.execute(equipamiento_id_query, (personaje['equipamiento'],))
+        equipamiento_id = cursor.fetchall()
 
         poder_id_query = "SELECT id FROM poderes WHERE nombre = %s"
-        self.cursor.execute(poder_id_query, (personaje['poder'],))
-        poder_id = self.cursor.fetchone()[0]
+        cursor.execute(poder_id_query, (personaje['poder'],))
+        poder_id = cursor.fetchall()
 
         estado_id_query = "SELECT id FROM estados WHERE nombre = %s"
-        self.cursor.execute(estado_id_query, (personaje['estado'],))
-        estado_id = self.cursor.fetchone()[0]
+        cursor.execute(estado_id_query, (personaje['estado'],))
+        estado_id = cursor.fetchall()
 
-        self.cursor.execute(
+        cursor.execute(
             "INSERT INTO personaje (nombre, raza_id, habilidad_id, equipamiento_id, poderes_id, estados_id) VALUES (%s, %s, %s, %s, %s, %s)",
-            (personaje['nombre'], raza_id, habilidad1_id, equipamiento_id, poder_id, estado_id)
+            (personaje['nombre'], raza_id, habilidad_id, equipamiento_id, poder_id, estado_id)
         )
-        self.conn.commit()
+        conexion.conexion.commit()
 
-    def mostrar_menu(self):
-        print("Menu:")
-        print("1. Crear personaje")
-        print("2. Mostrar personajes")
-        print("3. Eliminar personaje")
-        print("4. Salir")
-
-    def mostrar_personajes(self):
-        self.cursor.execute("SELECT * FROM personaje")
-        personajes = self.cursor.fetchall()
+    def mostrar_personajes():
+        cursor.execute("SELECT * FROM personaje")
+        personajes = cursor.fetchall()
 
         if not personajes:
             print("\nNo hay personajes creados.")
@@ -124,9 +133,9 @@ class Personaje:
             if eleccion < 0 or eleccion >= len(personajes):
                 print("Opción no válida.")
             else:
-                self.mostrar_personaje(personajes[eleccion])
+                mostrar_personaje(personajes[eleccion])
 
-    def mostrar_personaje(self, personaje):
+    def mostrar_personaje( personaje):
         print(f"\nResumen del personaje:")
         print(f"  Nombre: {personaje[1]}")
         print(f"  Raza ID: {personaje[2]}")
@@ -135,9 +144,9 @@ class Personaje:
         print(f"  Poder ID: {personaje[5]}")
         print(f"  Estado ID: {personaje[6]}")
 
-    def eliminar_personaje(self):
-        self.cursor.execute("SELECT * FROM personaje")
-        personajes = self.cursor.fetchall()
+    def eliminar_personaje():
+        cursor.execute("SELECT * FROM personaje")
+        personajes = cursor.fetchall()
 
         if not personajes:
             print("\nNo hay personajes creados.")
@@ -151,28 +160,13 @@ class Personaje:
                 print("Opción no válida.")
             else:
                 personaje_a_eliminar = personajes[eleccion]
-                self.cursor.execute("DELETE FROM personaje WHERE id = %s", (personaje_a_eliminar[0],))
-                self.conn.commit()
+                cursor.execute("DELETE FROM personaje WHERE id = %s", (personaje_a_eliminar[0],))
+                conexion.conexion.commit()
                 print(f"Personaje {personaje_a_eliminar[1]} eliminado.")
-
-    def juego(self):
-        while True:
-            self.mostrar_menu()
-            eleccion = int(input("Elige una opción: "))
-            
-            if eleccion == 1:
-                self.crear_personaje()
-            elif eleccion == 2:
-                self.mostrar_personajes()
-            elif eleccion == 3:
-                self.eliminar_personaje()
-            elif eleccion == 4:
-                break
-            else:
-                print("Opción no válida.")
-
-if __name__ == "__main__":
-    juego = Personaje()
-    juego.juego()
-
+                
+    def agregarEquipamiento(): 
+        pass
+    
+    def eliminarEquipamiento(): 
+        pass
                          

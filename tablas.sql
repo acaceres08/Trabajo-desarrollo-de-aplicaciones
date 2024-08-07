@@ -1,7 +1,9 @@
 create table usuario(
   	id      int AUTO_INCREMENT not null primary key, 
     usuario varchar(255) not null unique,
-    clave   varchar(255) not null
+    clave   varchar(255) not null,
+    enlinea boolean() not null,
+    tipo    varchar(255) not null
 );
 
 create table raza(
